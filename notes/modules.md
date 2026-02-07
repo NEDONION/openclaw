@@ -1,44 +1,45 @@
-# 模块拆分与职责（初版）
-
-> 本文基于目录结构与已阅读文件整理；职责将在后续阅读中细化与校准。
+# 模块拆分与职责（更新版）
 
 ## 入口与启动
-- `openclaw.mjs`: Node 入口，启用编译缓存并加载构建后的 `dist/entry.js`。
-- `src/entry.ts`: CLI 运行入口，处理参数、环境初始化、必要时重启进程以屏蔽 ExperimentalWarning。
-- `src/cli/run-main.ts`: CLI 主流程，路由命令、注册插件命令、解析并执行 Commander 指令。
-- `src/index.ts`: 导出公共 API，且支持作为主模块直接执行。
+- `openclaw.mjs`: Node 入口，启用 compile cache，加载构建产物 `dist/entry.js`。
+- `src/entry.ts`: CLI 进程级初始化（环境变量、终端色彩、ExperimentalWarning 处理、profile 参数）。
+- `src/cli/run-main.ts`: CLI 主流程，路由短路、注册命令/插件、执行 Commander。
+- `src/index.ts`: 导出公共 API，同时可作为主模块运行。
 
 ## CLI 与命令体系
-- `src/cli/*`: CLI 基础设施（参数解析、help、配置、预执行 hook、子 CLI）。
+- `src/cli/*`: CLI 基础设施（参数解析、help、预执行 hook、子 CLI）。
 - `src/commands/*`: 具体命令实现（setup/onboard/config/status/health/message/agents 等）。
 
-## 网关与路由（推断）
-- `src/gateway/*`: 网关核心（HTTP/WS、会话、鉴权、插件、通道服务编排）。
-- `src/routing/*`: 消息路由与通道选择逻辑。
-- `src/sessions/*`: 会话与状态管理。
+## 网关与服务编排（已验证）
+- `src/gateway/server.impl.ts`: Gateway 总装配，负责配置校验、插件加载、通道管理、HTTP/WS、监控/维护、热重载与关闭流程。
+- `src/gateway/server-http.ts`: HTTP 入口（hooks / tools / openai / openresponses / control ui / canvas host）。
+- `src/gateway/server-ws-runtime.ts`: WS 连接管理与请求分发。
+- `src/gateway/server-channels.ts`: 通道生命周期管理（start/stop/status）。
+- `src/gateway/server-startup.ts`: sidecars（浏览器控制、Gmail hooks、内部 hooks、plugin services、channels 启动）。
+- `src/gateway/boot.ts`: 启动时 BOOT.md 指令运行。
 
-## 渠道与适配层（推断）
-- `src/channels/*`: 通道通用能力/抽象。
-- `src/telegram`, `src/discord`, `src/slack`, `src/signal`, `src/imessage`, `src/web`, `src/whatsapp`, `src/line`: 各平台适配。
+## 通道系统（已验证）
+- `src/channels/registry.ts`: 核心通道元数据、顺序、文档路径与别名。
+- `src/channels/dock.ts`: 轻量 docking 配置（能力、allowFrom、mention 规则、threading 等）。
+- `src/channels/plugins/*`: 运行时通道插件注册（“重模块”）。
 
-## 代理/模型/记忆（推断）
-- `src/agents/*`: agent 运行与编排。
-- `src/providers/*`: LLM/外部模型与服务提供方适配。
-- `src/memory/*`: 记忆/检索/存储。
-- `src/tts/*`: 语音/文本处理。
+## 路由与会话（已验证）
+- `src/routing/resolve-route.ts`: 绑定规则 -> agentId + sessionKey 路由。
+- `src/routing/session-key.ts`: session key 规范（main/peer 等）。
 
-## 媒体与内容管线（推断）
-- `src/media/*`: 媒体处理。
-- `src/link-understanding`, `src/media-understanding`: 内容理解/解析。
+## Agent 运行（已验证）
+- `src/agents/pi-embedded-runner.ts`: 运行 API 对外汇总。
+- `src/agents/pi-embedded-runner/run.ts`: 运行入口，负责模型/认证选择、失败重试、上下文保护、结果汇总。
+- `src/agents/pi-embedded-runner/run/attempt.ts`: 单次运行尝试，构建系统提示词、加载工具/skills、会话管理、订阅流式输出。
 
 ## 插件与扩展（推断）
-- `src/plugins/*`: 插件加载、插件命令、运行时桥接。
-- `extensions/*`: 独立扩展包（如 msteams/matrix 等）。
+- `src/plugins/*`: 插件加载、服务与 hook 运行。
+- `extensions/*`: 外部扩展包（可添加新通道/功能）。
 
 ## 基础设施
 - `src/infra/*`: 运行时/平台/环境/路径/端口。
-- `src/process/*`: 子进程与执行。
+- `src/process/*`: 子进程与队列。
 - `src/logging*`: 日志与控制台捕获。
 - `src/terminal/*`: 终端输出与交互。
-- `src/security/*`: 安全相关（推断）。
+- `src/security/*`: 安全相关。
 
